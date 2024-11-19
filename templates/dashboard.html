@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home Security Dashboard</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            background-color: #f4f4f4;
+        }
+
+        h1 {
+            margin-bottom: 20px;
+        }
+
+        button {
+            padding: 10px 20px;
+            margin: 10px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        #logout {
+            background-color: #f44336;
+            color: white;
+        }
+
+        #arm {
+            background-color: #4CAF50;
+            color: white;
+        }
+
+        #disarm {
+            background-color: #ff9800;
+            color: white;
+        }
+
+        #start-record {
+            background-color: #2196F3;
+            color: white;
+        }
+
+        #stop-record {
+            background-color: #9C27B0;
+            color: white;
+        }
+
+        #status {
+            margin-top: 20px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        #video-feed {
+            margin-top: 20px;
+            width: 640px;
+            height: 360px;
+            background-color: black;
+        }
+    </style>
+</head>
+<body>
+    <h1>Home Security Dashboard</h1>
+
+    <button id="logout">Logout</button>
+    <button id="arm">Arm System</button>
+    <button id="disarm">Disarm System</button>
+    <button id="start-record">Start Recording</button>
+    <button id="stop-record">Stop Recording</button>
+
+    <div id="status">System Status: <span id="system-status">Disarmed</span></div>
+    <img id="video-feed" src="video_feed" alt="Live Video Feed">
+
+    
+    <script>
+        const logoutButton = document.getElementById('logout');
+        const armButton = document.getElementById('arm');
+        const disarmButton = document.getElementById('disarm');
+        const startRecordButton = document.getElementById('start-record');
+        const stopRecordButton = document.getElementById('stop-record');
+        const systemStatus = document.getElementById('system-status');
+        const videoFeed = document.getElementById('video-feed');
+
+        logoutButton.addEventListener('click', () => {
+            window.location.href = '/logout';
+        });
+
+        armButton.addEventListener('click', () => {
+            fetch('/arm', { method: 'POST' })
+                .then(response => response.text())
+                .then(data => {
+                    alert(data);
+                    systemStatus.textContent = 'Armed';
+                })
+                .catch(error => console.error('Error:', error));
+        });
+
+        disarmButton.addEventListener('click', () => {
+            fetch('/disarm', { method: 'POST' })
+                .then(response => response.text())
+                .then(data => {
+                    alert(data);
+                    systemStatus.textContent = 'Disarmed';
+                })
+                .catch(error => console.error('Error:', error));
+        });
+
+        startRecordButton.addEventListener('click', () => {
+            fetch('/start_record', { method: 'POST' })
+                .then(response => response.text())
+                .then(data => {
+                    alert(data);
+                })
+                .catch(error => console.error('Error:', error));
+        });
+
+        stopRecordButton.addEventListener('click', () => {
+            fetch('/stop_record', { method: 'POST' })
+                .then(response => response.text())
+                .then(data => {
+                    alert(data);
+                })
+                .catch(error => console.error('Error:', error));
+        });
+
+        // WebSocket connection for motion detection alert
+        const motionAlertSocket = new WebSocket('ws://localhost:5000/motion_alert');
+
+        motionAlertSocket.onmessage = function (event) {
+            alert('Motion detected!');
+        };
+        
+        videoFeed.src = 'http://127.0.0.1:5000/video_feed';
+    </script>
+</body>
+</html>

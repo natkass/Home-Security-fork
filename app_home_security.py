@@ -1,22 +1,11 @@
-"""
- *****************************************************
- *
- *              Gabor Vecsei
- * Email:       vecseigabor.x@gmail.com
- * Blog:        https://gaborvecsei.wordpress.com/
- * LinkedIn:    www.linkedin.com/in/gaborvecsei
- * Github:      https://github.com/gaborvecsei
- * Twitter:     https://twitter.com/GAwesomeBE
- *
- *****************************************************
-"""
+
 
 try:
 	import configparser
 except ImportError as e:
 	import ConfigParser as configparser
 
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, Response
 
 from HomeSecurityModules import Firebase
 from HomeSecurityModules import HomeSecurity, STATUS_STOPPED, STATUS_RUNNING
@@ -25,7 +14,7 @@ from HomeSecurityModules import MotionDetector
 app = Flask(__name__)
 
 config = configparser.ConfigParser()
-config.read('my_config.ini')
+config.read('config.ini')
 
 api_key = config.get("Firebase", "apiKey")
 auth_domain = config.get("Firebase", "authDomain")
@@ -81,7 +70,7 @@ def home():
         print("{0} would like to START Home Security".format(email_input))
         if home_security.get_status_code() == STATUS_STOPPED:
             home_security.start()
-            return "Started Home Security"
+            return render_template('dashboard.html')
         else:
             return "Already started"
 
@@ -89,10 +78,54 @@ def home():
         print("{0} would like to STOP Home Security".format(email_input))
         if home_security.get_status_code() == STATUS_RUNNING:
             home_security.stop()
-            return "Home Security Stopped"
+            return render_template('dashboard.html')
+            # return "Home Security Stopped"
         else:
-            return "Home Security is not running"
+            return render_template('dashboard.html')
+            # return "Home Security is not running"
+
+@app.route('/logout')
+def logout():
+    # Implement your logout logic here
+    if home_security.get_status_code() == STATUS_RUNNING:
+            home_security.stop()
+    return render_template('/login_form.html')
+        
+@app.route('/arm', methods=['POST'])
+def arm_system():
+        if home_security.get_status_code() == STATUS_STOPPED:
+            home_security.start()
+            return "System armed"
+        else:
+            return "System is already armed"
+
+@app.route('/disarm', methods=['POST'])
+def disarm_system():
+        if home_security.get_status_code() == STATUS_RUNNING:
+            home_security.stop()
+            return "System diarmed"
+        else:
+            return "System is already disarmed"
+
+@app.route('/start_record', methods=['POST'])
+def start_record():
+    if home_security.start_recording():
+        return render_template('dashboard.html')
+    else:
+        return "Recording is already in progress"
+
+@app.route('/stop_record', methods=['POST'])
+def stop_record():
+        if home_security.stop_recording():
+            return "Recording stopped and video saved successfully"
+        else:
+            return "No recording in progress to stop"
+
+@app.route('/video_feed')
+def video_feed():
+    return Response(home_security.generate_frames(),
+                    mimetype='multipart/x-mixed-replace; boundary=frame')
 
 
 if __name__ == '__main__':
-    app.run(host="0.0.0.0", port=5000)
+    app.run(host="0.0.0.0", port=5000, debug=True)

@@ -17,6 +17,9 @@ class HomeSecurity:
         self.motion_detector = motion_detector
         self.fps = fps
         self.detection_thread = None
+        self.recording = False  
+        self.video_writer = None 
+        self.armed = False  
 
     def login(self, email, password, refresh_time_in_sec):
         succesful_login = self.firebase.authenticate(email, password)
@@ -93,3 +96,85 @@ class HomeSecurity:
             self.status = STATUS_RUNNING
             self.detection_thread = threading.Thread(target=self.start_detection)
             self.detection_thread.start()
+    
+    def arm(self):
+        if not self.armed:
+            self.armed = True
+            self.start()
+            print("System armed and detection started")
+            threading.Thread(target=self.generate_frames).start()
+            return True
+        else:
+            print("System is already armed")
+            return False
+
+    def disarm(self):
+        if self.armed:
+            self.armed = False
+            self.stop()
+            print("System disarmed and detection stopped")
+            return True
+        else:
+            print("System is already disarmed")
+            return False
+
+    def start_recording(self):
+        if not self.recording:
+            fourcc = cv2.VideoWriter_fourcc(*'XVID')
+            video_name = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S-%f") + ".avi"
+            self.video_writer = cv2.VideoWriter(video_name, fourcc, self.fps, (640, 480))
+            self.recording = True
+            print("Recording started")
+            return True
+        else:
+            print("Recording is already in progress")
+            return False
+
+    def stop_recording(self):
+        if self.recording:
+            self.recording = False
+            self.video_writer.release()
+            video_name = self.video_writer.filename
+            self.firebase.store_video(video_name)
+            print("Recording stopped and video saved to Firebase")
+            return True
+        else:
+            print("No recording in progress to stop")
+            return False
+    # def generate_frames(self):
+    #     try:
+    #         while True:
+    #             success, frame = self.camera.read()
+    #             if not success:
+    #                 break
+    #             else:
+    #                 ret, buffer = cv2.imencode('.jpg', frame)
+    #                 frame = buffer.tobytes()
+    #                 yield (b'--frame\r\n'
+    #                     b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
+    #     except Exception as e:
+    #         print(f"Error in generating frames: {e}")
+
+    def generate_frames(self):
+        while True:
+            if self.camera is not None and self.camera.isOpened():
+                success, frame = self.camera.read()
+                if not success:
+                    print("Failed to read frame")
+                    break
+                else:
+                    print("Frame read successfully")
+                    ret, buffer = cv2.imencode('.jpg', frame)
+                    frame = buffer.tobytes()
+                    yield (b'--frame\r\n'
+                        b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
+            else:
+                print("Camera is not open")
+                break
+
+
+        # except Exception as e:
+        #         print(f"Error in generating frames: {e}")
+
+
+
